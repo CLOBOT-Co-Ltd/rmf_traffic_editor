@@ -18,6 +18,8 @@
 #include "align_level_dialog.h"
 #include <QtWidgets>
 #include <QSpacerItem>
+#include <QJsonObject>
+#include <QJsonDocument>
 
 
 AlignLevelDialog::AlignLevelDialog(Building& building)
@@ -139,7 +141,18 @@ void AlignLevelDialog::ok_button_clicked()
 
 void AlignLevelDialog::export_button_clicked()
 {
+  QFileDialog dialog(this, "Export as json");
+  dialog.setNameFilter("*.json");
+  dialog.setDefaultSuffix(".json");
+  dialog.setAcceptMode(QFileDialog::AcceptMode::AcceptSave);
+  dialog.setConfirmOverwrite(true);
 
+  if (dialog.exec() != QDialog::Accepted)
+    return;
+
+  QFileInfo file_info(dialog.selectedFiles().first());
+
+  save(file_info.absoluteFilePath());
 }
 
 void AlignLevelDialog::draw_scene(QGraphicsScene* scene, const int level_idx)
@@ -154,3 +167,43 @@ void AlignLevelDialog::draw_output_scene()
 
 }
 
+bool AlignLevelDialog::save(QString fn)
+{
+  QJsonArray jarr;
+  QFile saveFile(fn);
+  
+  QJsonObject obj;
+
+  // TODO : convert for loop to adapt multi map alignment
+  // ------------------------------------------------------
+  obj["Map"] = "right";
+  QJsonArray arr_connection;
+  QJsonObject connection;
+  connection["To"] = "left";
+  QJsonObject position;
+  position["x"] = 0.0;
+  position["y"] = 0.0;
+  position["z"] = 0.0;
+  connection["Position"] = position;
+  QJsonObject orientation;
+  orientation["x"] = 0.0;
+  orientation["y"] = 0.0;
+  orientation["w"] = 0.0;
+  orientation["z"] = 0.0;
+  connection["Orientation"] = orientation;
+  arr_connection.append(connection);
+  obj["Connection"] = arr_connection;
+  jarr.append(obj);
+  QJsonDocument doc(jarr);
+
+  // ------------------------------------------------------
+
+  if (!saveFile.open(QIODevice::WriteOnly))
+  {
+    return false;
+  }
+
+  saveFile.write(doc.toJson());
+
+  return true;
+}

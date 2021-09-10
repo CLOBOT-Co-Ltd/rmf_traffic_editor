@@ -59,6 +59,7 @@ private:
 
   void draw_scene(QGraphicsScene* scene, const int level_idx);
   void draw_output_scene();
+  bool save(QString fn);
 
 private slots:
   void export_button_clicked();

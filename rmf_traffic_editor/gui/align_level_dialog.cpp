@@ -35,10 +35,19 @@ AlignLevelDialog::AlignLevelDialog(Building& building)
   // first level ui
   QVBoxLayout* fst_level_vbox = new QVBoxLayout;
   fst_level_vbox->addWidget(new QLabel("Level 1"));
+  
   _fst_level_combo_box = new QComboBox;
   for (const auto& level : building.levels)
     _fst_level_combo_box->addItem(QString::fromStdString(level.name));
+  _fst_level_combo_box->setCurrentIndex(0);
   fst_level_vbox->addWidget(_fst_level_combo_box);
+
+  _fst_level_scene = new QGraphicsScene;
+  _fst_level_view = new MapView;
+  _fst_level_view->setScene(_fst_level_scene);
+  draw_scene(_fst_level_scene, 0);
+  fst_level_vbox->addWidget(_fst_level_view);
+
   connect(
     _fst_level_combo_box,
     QOverload<int>::of(&QComboBox::currentIndexChanged),
@@ -47,14 +56,6 @@ AlignLevelDialog::AlignLevelDialog(Building& building)
       draw_scene(_fst_level_scene, idx);
     });
 
-  _fst_level_scene = new QGraphicsScene;
-  _fst_level_view = new MapView;
-  _fst_level_view->setScene(_fst_level_scene);
-
-  draw_scene(_fst_level_scene, 0);
-
-  fst_level_vbox->addWidget(_fst_level_view);
-
   // second level ui
   QVBoxLayout* scd_level_vbox = new QVBoxLayout;
   scd_level_vbox->addWidget(new QLabel("Level 2"));
@@ -62,7 +63,15 @@ AlignLevelDialog::AlignLevelDialog(Building& building)
   _scd_level_combo_box = new QComboBox;
   for (const auto& level : building.levels)
     _scd_level_combo_box->addItem(QString::fromStdString(level.name));
+  _scd_level_combo_box->setCurrentIndex(1);
   scd_level_vbox->addWidget(_scd_level_combo_box);
+
+  _scd_level_scene = new QGraphicsScene;
+  _scd_level_view = new MapView;
+  _scd_level_view->setScene(_scd_level_scene);
+  draw_scene(_scd_level_scene, 1);
+  scd_level_vbox->addWidget(_scd_level_view);
+
   connect(
     _scd_level_combo_box,
     QOverload<int>::of(&QComboBox::currentIndexChanged),
@@ -71,12 +80,6 @@ AlignLevelDialog::AlignLevelDialog(Building& building)
       draw_scene(_scd_level_scene, idx);
     });
 
-  _scd_level_scene = new QGraphicsScene;
-  _scd_level_view = new MapView;
-  _scd_level_view->setScene(_scd_level_scene);
-  draw_scene(_scd_level_scene, 1);
-
-  scd_level_vbox->addWidget(_scd_level_view);
 
   // output level ui
   QVBoxLayout* output_level_vbox = new QVBoxLayout;

@@ -35,17 +35,18 @@ AlignLevelDialog::AlignLevelDialog(Building& building)
   // first level ui
   QVBoxLayout* fst_level_vbox = new QVBoxLayout;
   fst_level_vbox->addWidget(new QLabel("Level 1"));
-  
+
   _fst_level_combo_box = new QComboBox;
   for (const auto& level : building.levels)
     _fst_level_combo_box->addItem(QString::fromStdString(level.name));
-  _fst_level_combo_box->setCurrentIndex(0);
+  _fst_level_idx = 0;
+  _fst_level_combo_box->setCurrentIndex(_fst_level_idx);
   fst_level_vbox->addWidget(_fst_level_combo_box);
 
   _fst_level_scene = new QGraphicsScene;
   _fst_level_view = new MapView;
   _fst_level_view->setScene(_fst_level_scene);
-  draw_scene(_fst_level_scene, 0);
+  draw_scene(_fst_level_scene, _fst_level_idx);
   fst_level_vbox->addWidget(_fst_level_view);
 
   connect(
@@ -53,6 +54,12 @@ AlignLevelDialog::AlignLevelDialog(Building& building)
     QOverload<int>::of(&QComboBox::currentIndexChanged),
     [this](const int idx)
     {
+      if (idx == _scd_level_idx)
+      {
+        _fst_level_combo_box->setCurrentIndex(_fst_level_idx);
+        return;
+      }
+      _fst_level_idx = idx;
       draw_scene(_fst_level_scene, idx);
     });
 
@@ -63,13 +70,14 @@ AlignLevelDialog::AlignLevelDialog(Building& building)
   _scd_level_combo_box = new QComboBox;
   for (const auto& level : building.levels)
     _scd_level_combo_box->addItem(QString::fromStdString(level.name));
-  _scd_level_combo_box->setCurrentIndex(1);
+  _scd_level_idx = 1;
+  _scd_level_combo_box->setCurrentIndex(_scd_level_idx);
   scd_level_vbox->addWidget(_scd_level_combo_box);
 
   _scd_level_scene = new QGraphicsScene;
   _scd_level_view = new MapView;
   _scd_level_view->setScene(_scd_level_scene);
-  draw_scene(_scd_level_scene, 1);
+  draw_scene(_scd_level_scene, _scd_level_idx);
   scd_level_vbox->addWidget(_scd_level_view);
 
   connect(
@@ -77,6 +85,12 @@ AlignLevelDialog::AlignLevelDialog(Building& building)
     QOverload<int>::of(&QComboBox::currentIndexChanged),
     [this](const int idx)
     {
+      if (idx == _fst_level_idx)
+      {
+        _scd_level_combo_box->setCurrentIndex(_scd_level_idx);
+        return;
+      }
+      _scd_level_idx = idx;
       draw_scene(_scd_level_scene, idx);
     });
 

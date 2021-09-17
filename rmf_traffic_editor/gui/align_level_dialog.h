@@ -89,8 +89,7 @@ private:
 
 
   void draw_scene(QGraphicsScene* scene,
-    const int draw_level_idx,
-    const int relative_level_idx);
+    const int draw_level_idx);
   void draw_output_scene();
   bool save(QString fn);
 
@@ -118,6 +117,7 @@ private:
   bool is_have_relative(const int selected_idx, const int relative_idx);
 
   bool add_origin(const Level& level, const int idx);
+  bool add_origin(const QPointF& origin, const QPointF& dst, const int idx,
     const QColor color);
   bool add_relative_point(const QPointF& start, const QPointF& dst,
     const int from_idx, const int to_idx);

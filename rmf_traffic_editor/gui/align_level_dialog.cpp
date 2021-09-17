@@ -53,7 +53,7 @@ AlignLevelDialog::AlignLevelDialog(Building& building)
   _fst_level_scene = new QGraphicsScene;
   _fst_level_view = new MapView;
   _fst_level_view->setScene(_fst_level_scene);
-  draw_scene(_fst_level_scene, _fst_level_idx, _scd_level_idx);
+  draw_scene(_fst_level_scene, _fst_level_idx);
   fst_level_vbox->addWidget(_fst_level_view);
   _fst_level_view->scale(1.00001, 1.00001);
 
@@ -68,7 +68,7 @@ AlignLevelDialog::AlignLevelDialog(Building& building)
       {
         _scd_level_combo_box->setCurrentIndex(old_fst_level_idx);
       }
-      draw_scene(_fst_level_scene, idx, old_fst_level_idx);
+      draw_scene(_fst_level_scene, idx);
     });
 
   // second level ui
@@ -85,7 +85,7 @@ AlignLevelDialog::AlignLevelDialog(Building& building)
   _scd_level_scene = new QGraphicsScene;
   _scd_level_view = new MapView;
   _scd_level_view->setScene(_scd_level_scene);
-  draw_scene(_scd_level_scene, _scd_level_idx, _fst_level_idx);
+  draw_scene(_scd_level_scene, _scd_level_idx);
   scd_level_vbox->addWidget(_scd_level_view);
   _scd_level_view->scale(1.00001, 1.00001);
 
@@ -100,7 +100,7 @@ AlignLevelDialog::AlignLevelDialog(Building& building)
         return;
       }
       _scd_level_idx = idx;
-      draw_scene(_scd_level_scene, idx, _fst_level_idx);
+      draw_scene(_scd_level_scene, idx);
     });
 
 
@@ -181,14 +181,11 @@ void AlignLevelDialog::export_button_clicked()
 }
 
 void AlignLevelDialog::draw_scene(QGraphicsScene* scene,
-  const int draw_level_idx,
-  const int relative_level_idx)
+  const int draw_level_idx)
 {
   scene->clear();
 
   scene->addPixmap(_building.levels.at(draw_level_idx).floorplan_pixmap);
-
-  QColor p_color = QColor::fromRgbF(0.0, 0.5, 0.0, 0.5);
 
   if (is_have_origin(draw_level_idx))
   {
@@ -196,10 +193,10 @@ void AlignLevelDialog::draw_scene(QGraphicsScene* scene,
       alignments[draw_level_idx].color);
     draw_orientation(scene, alignments[draw_level_idx].position,
       alignments[draw_level_idx].orientation);
-    QGraphicsSimpleTextItem* item = scene->addSimpleText(
+    QGraphicsSimpleTextItem* item_origin = scene->addSimpleText(
       QString::fromStdString("origin"));
-    item->setBrush(alignments[draw_level_idx].color);
-    item->setPos(alignments[draw_level_idx].position.x(),
+    item_origin->setBrush(alignments[draw_level_idx].color);
+    item_origin->setPos(alignments[draw_level_idx].position.x(),
       alignments[draw_level_idx].position.y() + 10);
 
     for (const auto to : alignments[draw_level_idx].relative_point)
@@ -211,10 +208,10 @@ void AlignLevelDialog::draw_scene(QGraphicsScene* scene,
         to.second.orientation);
 
 
-      QGraphicsSimpleTextItem* item = scene->addSimpleText(
+      QGraphicsSimpleTextItem* item_relative = scene->addSimpleText(
         QString::fromStdString(alignments[to.second.idx].name));
-      item->setBrush(alignments[to.second.idx].color);
-      item->setPos(to.second.position.x(),
+      item_relative->setBrush(alignments[to.second.idx].color);
+      item_relative->setPos(to.second.position.x(),
         to.second.position.y() + 10);
     }
   }
@@ -234,8 +231,6 @@ bool AlignLevelDialog::save(QString fn)
 
   for (const auto a : alignments)
   {
-    QJsonObject obj;
-
     obj["Map"] = a.second.name.c_str();
     QJsonArray arr_connection;
     for (const auto to : a.second.relative_point)
@@ -262,8 +257,9 @@ bool AlignLevelDialog::save(QString fn)
 
       // * QQuaternion's fromEulerAngles function has different coordinate system from ros.
       // * input yaw to roll (z axis around).
-      QQuaternion quaternion = QQuaternion::fromEulerAngles(0., 0., (float)diff_yaw * 180 / M_PI);
-      
+      QQuaternion quaternion = QQuaternion::fromEulerAngles(0., 0.,
+          (float)diff_yaw * 180 / M_PI);
+
       position["x"] = rotate_x;
       position["y"] = rotate_y;
       position["z"] = 0.0;
@@ -449,7 +445,7 @@ void AlignLevelDialog::mouse_event(const MouseType t, QMouseEvent* e)
       {
         if (add_origin(clicked_point, p, selected_level_idx, _color))
         {
-          draw_scene(mv->scene(), selected_level_idx, relative_level_idx);
+          draw_scene(mv->scene(), selected_level_idx);
         }
       }
       else
@@ -457,7 +453,7 @@ void AlignLevelDialog::mouse_event(const MouseType t, QMouseEvent* e)
         if (add_relative_point(clicked_point, p, selected_level_idx,
           relative_level_idx))
         {
-          draw_scene(mv->scene(), selected_level_idx, relative_level_idx);
+          draw_scene(mv->scene(), selected_level_idx);
         }
       }
 
@@ -526,6 +522,7 @@ bool AlignLevelDialog::add_origin(const Level& level, const int idx)
 
   return true;
 }
+
 bool AlignLevelDialog::add_origin(const QPointF& start, const QPointF& dst,
   const int idx, const QColor color)
 {
@@ -671,11 +668,11 @@ void AlignLevelDialog::draw_moving_orientation(QGraphicsScene* scene,
 QColor AlignLevelDialog::gen_random_color()
 {
   const double golden_ratio_conjugate = 0.618033988749895;
-  double r = ((double)rand() / RAND_MAX) + 0.618033988749895;
+  double r = ((double)rand() / RAND_MAX) + golden_ratio_conjugate;
   r = fmod(r, 1.0);
-  double g = ((double)rand() / RAND_MAX) + 0.618033988749895;
+  double g = ((double)rand() / RAND_MAX) + golden_ratio_conjugate;
   g = fmod(g, 1.0);
-  double b = ((double)rand() / RAND_MAX) + 0.618033988749895;
+  double b = ((double)rand() / RAND_MAX) + golden_ratio_conjugate;
   b = fmod(b, 1.0);
 
   return QColor::fromRgbF(r, g, b);

@@ -31,6 +31,12 @@ AlignLevelDialog::AlignLevelDialog(Building& building)
   _export_button = new QPushButton("Export", this);  // first button = [enter] button
   _cancel_button = new QPushButton("Cancel", this);
 
+  // add origin in alignments
+  for (size_t i = 0; i < _building.levels.size(); i++)
+  {
+    add_origin(_building.levels[i], i);
+  }
+
   QHBoxLayout* levels_graphic_hbox = new QHBoxLayout;
 
   // first level ui
@@ -499,6 +505,27 @@ bool AlignLevelDialog::is_have_relative(const int from_idx,
     alignments[from_idx].relative_point.end();
 }
 
+bool AlignLevelDialog::add_origin(const Level& level, const int idx)
+{
+  if (is_have_origin(idx))
+  {
+    return false;
+  }
+
+  AlignmentInfo align_info;
+  align_info.idx = idx;
+  align_info.name = level.name;
+  align_info.position.setX(((double)level.drawing_width)/2);
+  align_info.position.setY(((double)level.drawing_height)/2);
+
+  align_info.orientation = 0;
+
+  align_info.color = gen_random_color();
+
+  alignments.insert(std::pair<int, AlignmentInfo>(idx, align_info));
+
+  return true;
+}
 bool AlignLevelDialog::add_origin(const QPointF& start, const QPointF& dst,
   const int idx, const QColor color)
 {

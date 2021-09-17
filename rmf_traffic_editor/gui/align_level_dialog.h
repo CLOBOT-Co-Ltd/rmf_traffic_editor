@@ -117,7 +117,7 @@ private:
   bool is_have_origin(const int level_idx);
   bool is_have_relative(const int selected_idx, const int relative_idx);
 
-  bool add_origin(const QPointF& start, const QPointF& dst, const int idx,
+  bool add_origin(const Level& level, const int idx);
     const QColor color);
   bool add_relative_point(const QPointF& start, const QPointF& dst,
     const int from_idx, const int to_idx);

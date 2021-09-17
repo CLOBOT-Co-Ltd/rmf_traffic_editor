@@ -37,6 +37,7 @@ struct AlignmentInfo
   std::string name = "";
   QPointF position;
   double orientation;
+  QColor color;
 
   /// TODO: add link infomation with other levels.
   std::map<int, AlignmentInfo> relative_point;
@@ -77,11 +78,19 @@ private:
   QGraphicsScene* _output_level_scene;
   MapView* _output_level_view;
 
+  MapView* _last_mv;
+
   AlignLevelTable* _align_table;
 
   QPushButton* _export_button, * _cancel_button;
 
-  void draw_scene(QGraphicsScene* scene, const int level_idx);
+  QColor _color;
+  std::vector<QColor> _pallete;
+
+
+  void draw_scene(QGraphicsScene* scene,
+    const int draw_level_idx,
+    const int relative_level_idx);
   void draw_output_scene();
   bool save(QString fn);
 
@@ -95,22 +104,31 @@ private:
   };
 
   bool is_clicked = false;
+  bool is_ctrl_pressed = false;
   QPointF clicked_point;
   QGraphicsEllipseItem* postion_ellipse = nullptr;
-  QGraphicsLineItem* orientation_line = nullptr;
+  QGraphicsLineItem* orientation_line_x = nullptr;
+  QGraphicsLineItem* orientation_line_y = nullptr;
+  QGraphicsSimpleTextItem* position_text = nullptr;
 
   void mouse_event(const MouseType t, QMouseEvent* e);
   bool is_mouse_event_in_map_view(QMouseEvent* e, QPointF& p, MapView* mv);
 
-  bool add_origin(const QPointF& start, const QPointF& dst);
-  bool add_relative_point(const QPointF& start, const QPointF& dst);
+  bool is_have_origin(const int level_idx);
+  bool is_have_relative(const int selected_idx, const int relative_idx);
+
+  bool add_origin(const QPointF& start, const QPointF& dst, const int idx,
+    const QColor color);
+  bool add_relative_point(const QPointF& start, const QPointF& dst,
+    const int from_idx, const int to_idx);
 
   // for graphics
-  void draw_position(QGraphicsScene* scene, const QPointF& p);
-  void draw_orientation(QGraphicsScene* scene, const QPointF& p,
-    const double& angle);
-  void draw_moving_orientation(QGraphicsScene* scene, const QPointF& p,
-    const double& angle);
+  void draw_position(QGraphicsScene* scene, const QPointF& p, QColor color);
+  void draw_orientation(QGraphicsScene* scene,
+    const QPointF& p, const double& angle);
+  void draw_moving_orientation(QGraphicsScene* scene,
+    const QPointF& p, const double& angle);
+  QColor gen_random_color();
 
 private slots:
   void export_button_clicked();

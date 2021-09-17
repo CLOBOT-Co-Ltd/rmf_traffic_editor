@@ -47,8 +47,9 @@ AlignLevelDialog::AlignLevelDialog(Building& building)
   _fst_level_scene = new QGraphicsScene;
   _fst_level_view = new MapView;
   _fst_level_view->setScene(_fst_level_scene);
-  draw_scene(_fst_level_scene, _fst_level_idx);
+  draw_scene(_fst_level_scene, _fst_level_idx, _scd_level_idx);
   fst_level_vbox->addWidget(_fst_level_view);
+  _fst_level_view->scale(1.00001, 1.00001);
 
   connect(
     _fst_level_combo_box,
@@ -61,7 +62,7 @@ AlignLevelDialog::AlignLevelDialog(Building& building)
       {
         _scd_level_combo_box->setCurrentIndex(old_fst_level_idx);
       }
-      draw_scene(_fst_level_scene, idx);
+      draw_scene(_fst_level_scene, idx, old_fst_level_idx);
     });
 
   // second level ui
@@ -78,8 +79,9 @@ AlignLevelDialog::AlignLevelDialog(Building& building)
   _scd_level_scene = new QGraphicsScene;
   _scd_level_view = new MapView;
   _scd_level_view->setScene(_scd_level_scene);
-  draw_scene(_scd_level_scene, _scd_level_idx);
+  draw_scene(_scd_level_scene, _scd_level_idx, _fst_level_idx);
   scd_level_vbox->addWidget(_scd_level_view);
+  _scd_level_view->scale(1.00001, 1.00001);
 
   connect(
     _scd_level_combo_box,
@@ -92,7 +94,7 @@ AlignLevelDialog::AlignLevelDialog(Building& building)
         return;
       }
       _scd_level_idx = idx;
-      draw_scene(_scd_level_scene, idx);
+      draw_scene(_scd_level_scene, idx, _fst_level_idx);
     });
 
 
@@ -109,7 +111,6 @@ AlignLevelDialog::AlignLevelDialog(Building& building)
   _output_level_scene = new QGraphicsScene;
   _output_level_view = new MapView;
   _output_level_view->setScene(_output_level_scene);
-  draw_scene(_output_level_scene, 0);
 
   output_level_vbox->addWidget(_output_level_view);
 
@@ -173,36 +174,49 @@ void AlignLevelDialog::export_button_clicked()
   save(file_info.absoluteFilePath());
 }
 
-void AlignLevelDialog::draw_scene(QGraphicsScene* scene, const int level_idx)
+void AlignLevelDialog::draw_scene(QGraphicsScene* scene,
+  const int draw_level_idx,
+  const int relative_level_idx)
 {
   scene->clear();
 
-  scene->addPixmap(_building.levels.at(level_idx).floorplan_pixmap);
+  scene->addPixmap(_building.levels.at(draw_level_idx).floorplan_pixmap);
 
-  if (alignments.find(level_idx) != alignments.end() &&
-    level_idx == _fst_level_idx)
-  {
-    draw_position(scene, alignments[level_idx].position);
-    draw_orientation(scene, alignments[level_idx].position,
-      alignments[level_idx].orientation);
-  }
+  QColor p_color = QColor::fromRgbF(0.0, 0.5, 0.0, 0.5);
 
-  if (alignments.find(_fst_level_idx) != alignments.end() &&
-    alignments[_fst_level_idx].relative_point.find(level_idx) !=
-    alignments[_fst_level_idx].relative_point.end() &&
-    level_idx == _scd_level_idx)
+  if (is_have_origin(draw_level_idx))
   {
-    draw_position(scene,
-      alignments[_fst_level_idx].relative_point[level_idx].position);
-    draw_orientation(scene,
-      alignments[_fst_level_idx].relative_point[level_idx].position,
-      alignments[_fst_level_idx].relative_point[level_idx].orientation);
+    draw_position(scene, alignments[draw_level_idx].position,
+      alignments[draw_level_idx].color);
+    draw_orientation(scene, alignments[draw_level_idx].position,
+      alignments[draw_level_idx].orientation);
+    QGraphicsSimpleTextItem* item = scene->addSimpleText(
+      QString::fromStdString("origin"));
+    item->setBrush(alignments[draw_level_idx].color);
+    item->setPos(alignments[draw_level_idx].position.x(),
+      alignments[draw_level_idx].position.y() + 10);
+
+    for (const auto to : alignments[draw_level_idx].relative_point)
+    {
+      QColor p_color = QColor::fromHsvF(
+        alignments[to.second.idx].color.hsvHueF(), 0.3, 0.99);
+      draw_position(scene, to.second.position, p_color);
+      draw_orientation(scene, to.second.position,
+        to.second.orientation);
+
+
+      QGraphicsSimpleTextItem* item = scene->addSimpleText(
+        QString::fromStdString(alignments[to.second.idx].name));
+      item->setBrush(alignments[to.second.idx].color);
+      item->setPos(to.second.position.x(),
+        to.second.position.y() + 10);
+    }
   }
 }
 
 void AlignLevelDialog::draw_output_scene()
 {
-
+  // TODO : Draw output scene which contains combined image.
 }
 
 bool AlignLevelDialog::save(QString fn)
@@ -212,29 +226,56 @@ bool AlignLevelDialog::save(QString fn)
 
   QJsonObject obj;
 
-  // TODO : convert for loop to adapt multi map alignment
-  // ------------------------------------------------------
-  obj["Map"] = "right";
-  QJsonArray arr_connection;
-  QJsonObject connection;
-  connection["To"] = "left";
-  QJsonObject position;
-  position["x"] = 0.0;
-  position["y"] = 0.0;
-  position["z"] = 0.0;
-  connection["Position"] = position;
-  QJsonObject orientation;
-  orientation["x"] = 0.0;
-  orientation["y"] = 0.0;
-  orientation["w"] = 0.0;
-  orientation["z"] = 0.0;
-  connection["Orientation"] = orientation;
-  arr_connection.append(connection);
-  obj["Connection"] = arr_connection;
-  jarr.append(obj);
-  QJsonDocument doc(jarr);
+  for (const auto a : alignments)
+  {
+    QJsonObject obj;
 
-  // ------------------------------------------------------
+    obj["Map"] = a.second.name.c_str();
+    QJsonArray arr_connection;
+    for (const auto to : a.second.relative_point)
+    {
+      QJsonObject connection;
+      connection["To"] = to.second.name.c_str();
+      QJsonObject position;
+      double real_x_src = (to.second.position.x() - a.second.position.x());
+      real_x_src *= _building.level_meters_per_pixel(a.second.name);
+
+      double real_y_src = -1 * (to.second.position.y() - a.second.position.y());
+      real_y_src *= _building.level_meters_per_pixel(a.second.name);
+
+      double rotate_x;
+      double rotate_y;
+      // * the orientaion of alignmentinfo is aimed to origin of image(graphic scene)
+      // * To follow ros coordinate system, multiply '-1' to orientation
+      double yaw = -a.second.orientation;
+
+      rotate_x = cos(-yaw) * real_x_src - sin(-yaw) * real_y_src;
+      rotate_y = sin(-yaw) * real_x_src + cos(-yaw) * real_y_src;
+
+      double diff_yaw = -1*to.second.orientation - yaw;
+
+      // * QQuaternion's fromEulerAngles function has different coordinate system from ros.
+      // * input yaw to roll (z axis around).
+      QQuaternion quaternion = QQuaternion::fromEulerAngles(0., 0., (float)diff_yaw);
+      
+      position["x"] = rotate_x;
+      position["y"] = rotate_y;
+      position["z"] = 0.0;
+      connection["Position"] = position;
+      QJsonObject orientation;
+      orientation["w"] = quaternion.scalar();
+      orientation["x"] = quaternion.x();
+      orientation["y"] = quaternion.y();
+      orientation["z"] = quaternion.z();
+      connection["Orientation"] = orientation;
+      arr_connection.append(connection);
+
+    }
+    obj["Connection"] = arr_connection;
+    jarr.append(obj);
+  }
+
+  QJsonDocument doc(jarr);
 
   if (!saveFile.open(QIODevice::WriteOnly))
   {
@@ -251,81 +292,170 @@ void AlignLevelDialog::mouse_event(const MouseType t, QMouseEvent* e)
   QPointF p;
   MapView* mv;
 
-  //  0 : no one
-  //  1 : _fst_level_view
-  //  2 : _scd_level_view
-  int selected_view = -1;
+  int selected_level_idx = -1;
+  int relative_level_idx = -1;
 
   if (is_mouse_event_in_map_view(e, p, _fst_level_view))
   {
     mv = _fst_level_view;
-    selected_view = 1;
+    selected_level_idx = _fst_level_idx;
+    relative_level_idx = _scd_level_idx;
   }
   else if (is_mouse_event_in_map_view(e, p, _scd_level_view))
   {
     mv = _scd_level_view;
-    selected_view = 2;
+    selected_level_idx = _scd_level_idx;
+    relative_level_idx = _fst_level_idx;
   }
   else
   {
+    // * mouse point moving out the scene, remove text
+    if (position_text != nullptr)
+    {
+      _last_mv->scene()->removeItem(position_text);
+      delete position_text;
+      position_text = nullptr;
+    }
+
     e->ignore();
     return;
   }
 
-  switch (selected_view)
+  // draw text around mouse point
+  if (_last_mv != mv)
   {
-    case 1:
-      if (alignments.find(_fst_level_idx) != alignments.end())
-      {
-        return;
-      }
-      break;
-    case 2:
-      if (alignments.find(_fst_level_idx) == alignments.end() &&
-        t == MOUSE_PRESS)
-      {
-        QMessageBox::critical(
-          this,
-          "Could not set relevant pose",
-          "The reference level's origin hasn't set\n Set the origin in reference level first.",
-          "Ok");
-        return;
-      }
-      break;
-    default:
-      return;
+    if (position_text != nullptr)
+    {
+      _last_mv->scene()->removeItem(position_text);
+      delete position_text;
+      position_text = nullptr;
+    }
+  }
+  if (!is_clicked)
+  {
+    std::string name = _building.levels[selected_level_idx].name;
+
+    double y_offset;
+    double real_x_src;
+    double real_y_src;
+    QString text;
+
+    if (is_have_origin(selected_level_idx))
+    {
+      y_offset = (double)_building.levels[selected_level_idx].drawing_height;
+      real_x_src = (p.x() - alignments[selected_level_idx].position.x());
+      real_x_src *= _building.level_meters_per_pixel(name);
+
+      real_y_src = -1 * (p.y() - alignments[selected_level_idx].position.y());
+      real_y_src *= _building.level_meters_per_pixel(name);
+
+      double rotate_x;
+      double rotate_y;
+      // the orientaion of alignmentinfo is aimed to origin of image(graphic scene)
+      // To follow ros coordinate system, multiply '-1' to orientation
+      double yaw = -alignments[selected_level_idx].orientation;
+
+      rotate_x = cos(-yaw) * real_x_src - sin(-yaw) * real_y_src;
+      rotate_y = sin(-yaw) * real_x_src + cos(-yaw) * real_y_src;
+
+      text.sprintf("Set pose\nx : %3.2f\ny : %3.2f",
+        rotate_x, rotate_y);
+    }
+    else
+    {
+      y_offset = (double)_building.levels[selected_level_idx].drawing_height;
+      real_x_src = -1 * p.x() * _building.level_meters_per_pixel(name);
+      real_y_src = (p.y() - y_offset) * _building.level_meters_per_pixel(name);
+      text.sprintf("Set origin\nx : %3.2f\n y : %3.2f",
+        real_x_src, real_y_src);
+    }
+
+    if (position_text == nullptr)
+    {
+      position_text = mv->scene()->addSimpleText(text);
+      _last_mv = mv;
+      position_text->setBrush(QColor(0, 0, 0));
+      position_text->setPos(p.x(), p.y() + 15);
+    }
+    else
+    {
+      position_text->setText(text);
+      position_text->setPos(p.x(), p.y() + 15);
+    }
   }
 
+  // do the job
   if (t == MOUSE_PRESS)
   {
     if (!is_clicked)
     {
-      draw_position(mv->scene(), p);
+      is_ctrl_pressed = QGuiApplication::keyboardModifiers().testFlag(
+        Qt::ControlModifier);
+
+      if (!is_ctrl_pressed)
+      {
+        if (!is_have_origin(relative_level_idx) ||
+          !is_have_origin(selected_level_idx))
+        {
+          QMessageBox::critical(
+            this,
+            "Could not set relevant pose",
+            "Levels origin hasn't set\n Set the origin in level first.",
+            "Ok");
+          return;
+        }
+        // if already have relationship
+        if (is_have_relative(selected_level_idx, relative_level_idx))
+        {
+          return;
+        }
+      }
+      else
+      {
+        if (is_have_origin(selected_level_idx))
+        {
+          return;
+        }
+      }
+
+      _color = gen_random_color();
+      draw_position(mv->scene(), p, _color);
 
       clicked_point = p;
       is_clicked = true;
     }
     else
     {
-      mv->scene()->removeItem(orientation_line);
-      delete orientation_line;
-      orientation_line = nullptr;
-
-      if (selected_view == 1)
+      mv->scene()->removeItem(orientation_line_x);
+      mv->scene()->removeItem(orientation_line_y);
+      delete orientation_line_x;
+      delete orientation_line_y;
+      orientation_line_x = nullptr;
+      orientation_line_y = nullptr;
+      if (position_text != nullptr)
       {
-        if (add_origin(clicked_point, p))
+        mv->scene()->removeItem(position_text);
+        delete position_text;
+        position_text = nullptr;
+      }
+
+      if (is_ctrl_pressed)
+      {
+        if (add_origin(clicked_point, p, selected_level_idx, _color))
         {
-          draw_scene(mv->scene(), _fst_level_idx);
+          draw_scene(mv->scene(), selected_level_idx, relative_level_idx);
         }
       }
       else
       {
-        if (add_relative_point(clicked_point, p))
+        if (add_relative_point(clicked_point, p, selected_level_idx,
+          relative_level_idx))
         {
-          draw_scene(mv->scene(), _scd_level_idx);
+          draw_scene(mv->scene(), selected_level_idx, relative_level_idx);
         }
       }
 
+      is_ctrl_pressed = false;
       is_clicked = false;
     }
   }
@@ -336,7 +466,6 @@ void AlignLevelDialog::mouse_event(const MouseType t, QMouseEvent* e)
     double angle = atan2(diff_y, diff_x);
     draw_moving_orientation(mv->scene(), clicked_point, angle);
   }
-  // draw_position(mv->scene(), p);
 }
 
 bool AlignLevelDialog::is_mouse_event_in_map_view(QMouseEvent* e, QPointF& p,
@@ -353,43 +482,63 @@ bool AlignLevelDialog::is_mouse_event_in_map_view(QMouseEvent* e, QPointF& p,
   return true;
 }
 
-bool AlignLevelDialog::add_origin(const QPointF& start, const QPointF& dst)
+bool AlignLevelDialog::is_have_origin(const int level_idx)
 {
-  if (alignments.find(_fst_level_idx) != alignments.end())
+  return alignments.find(level_idx) != alignments.end();
+}
+
+bool AlignLevelDialog::is_have_relative(const int from_idx,
+  const int to_idx)
+{
+  if (!is_have_origin(from_idx))
+  {
+    return false;
+  }
+
+  return alignments[from_idx].relative_point.find(to_idx) !=
+    alignments[from_idx].relative_point.end();
+}
+
+bool AlignLevelDialog::add_origin(const QPointF& start, const QPointF& dst,
+  const int idx, const QColor color)
+{
+  if (is_have_origin(idx))
   {
     return false;
   }
 
   AlignmentInfo align_info;
-  align_info.idx = _fst_level_idx;
-  align_info.name = _building.levels[_fst_level_idx].name;
+  align_info.idx = idx;
+  align_info.name = _building.levels[idx].name;
   align_info.position = start;
 
   double diff_x = dst.x() - start.x();
   double diff_y = dst.y() - start.y();
   align_info.orientation = atan2(diff_y, diff_x);
 
-  alignments.insert(std::pair<int, AlignmentInfo>(_fst_level_idx, align_info));
+  align_info.color = color;
+
+  alignments.insert(std::pair<int, AlignmentInfo>(idx, align_info));
 
   return true;
 }
 
 bool AlignLevelDialog::add_relative_point(const QPointF& start,
-  const QPointF& dst)
+  const QPointF& dst, const int from_idx, const int to_idx)
 {
-  if (alignments.find(_fst_level_idx) == alignments.end())
+  if (!is_have_origin(from_idx))
   {
     return false;
   }
-  if (alignments[_fst_level_idx].relative_point.find(_scd_level_idx) !=
-    alignments[_fst_level_idx].relative_point.end())
+
+  if (is_have_relative(from_idx, to_idx))
   {
     return false;
   }
 
   AlignmentInfo align_info;
-  align_info.idx = _scd_level_idx;
-  align_info.name = _building.levels[_scd_level_idx].name;
+  align_info.idx = to_idx;
+  align_info.name = _building.levels[to_idx].name;
 
   align_info.position = start;
 
@@ -397,8 +546,8 @@ bool AlignLevelDialog::add_relative_point(const QPointF& start,
   double diff_y = dst.y() - start.y();
   align_info.orientation = atan2(diff_y, diff_x);
 
-  alignments[_fst_level_idx].relative_point.insert(std::pair<int, AlignmentInfo>(
-      _scd_level_idx,
+  alignments[from_idx].relative_point.insert(std::pair<int, AlignmentInfo>(
+      to_idx,
       align_info));
   return true;
 }
@@ -413,16 +562,12 @@ void AlignLevelDialog::mouseMoveEvent(QMouseEvent* e)
   mouse_event(MOUSE_MOVE, e);
 }
 
-void AlignLevelDialog::draw_position(QGraphicsScene* scene, const QPointF& p)
+void AlignLevelDialog::draw_position(QGraphicsScene* scene, const QPointF& p,
+  QColor color)
 {
   double radius = 10;
   QPen position_pen(Qt::black);
-  position_pen.setWidthF(radius / 2.0);
-
-  const double a = 0.5;
-  const QColor position_color = QColor::fromRgbF(0.0, 0.5, 0.0);
-  QColor self_color(position_color);
-  self_color.setAlphaF(a);
+  position_pen.setWidthF(radius / 5.0);
 
   QGraphicsEllipseItem* ellipse_item = scene->addEllipse(
     p.x() - 5,
@@ -430,47 +575,81 @@ void AlignLevelDialog::draw_position(QGraphicsScene* scene, const QPointF& p)
     2 * 5,
     2 * 5,
     position_pen,
-    self_color);
-
-  ellipse_item->setZValue(20.0);
+    color);
 }
 
-void AlignLevelDialog::draw_orientation(QGraphicsScene* scene, const QPointF& p,
-  const double& angle)
+void AlignLevelDialog::draw_orientation(QGraphicsScene* scene,
+  const QPointF& p, const double& angle)
 {
   const double len = 20;
-  double pen_width = 2;
-  QColor color = QColor::fromRgbF(0, 0, 1, 0.5);
+  double pen_width = 2.5;
 
-  QPen pen(QBrush(color), pen_width, Qt::SolidLine, Qt::PenCapStyle::RoundCap);
+  QColor r = QColor::fromRgbF(1.0, 0.0, 0.0, 1.0);
+  QColor g = QColor::fromRgbF(0.0, 1.0, 0.0, 1.0);
 
+  QPen pen_g(QBrush(g), pen_width, Qt::SolidLine, Qt::PenCapStyle::RoundCap);
+  QPen pen_r(QBrush(r), pen_width, Qt::SolidLine, Qt::PenCapStyle::RoundCap);
   double xx = p.x() + cos(angle) * len;
   double yy = p.y() + sin(angle) * len;
 
-  QGraphicsLineItem* line_item = scene->addLine(p.x(), p.y(), xx, yy, pen);
+  QGraphicsLineItem* line_item_x = scene->addLine(p.x(), p.y(), xx, yy, pen_r);
+
+  xx = p.x() + cos(angle - M_PI_2) * len;
+  yy = p.y() + sin(angle - M_PI_2) * len;
+  QGraphicsLineItem* line_item_y = scene->addLine(p.x(), p.y(), xx, yy, pen_g);
 }
 
 void AlignLevelDialog::draw_moving_orientation(QGraphicsScene* scene,
-  const QPointF& p,
-  const double& angle)
+  const QPointF& p, const double& angle)
 {
   const double len = 20;
-  double pen_width = 2;
-  QColor color = QColor::fromRgbF(0, 0, 1, 0.5);
+  double pen_width = 2.5;
 
-  QPen pen(QBrush(color), pen_width, Qt::SolidLine, Qt::PenCapStyle::RoundCap);
+  QColor r = QColor::fromRgbF(1.0, 0.0, 0.0, 1.0);
+  QColor g = QColor::fromRgbF(0.0, 1.0, 0.0, 1.0);
+
+
+  QPen pen_g(QBrush(g), pen_width, Qt::SolidLine, Qt::PenCapStyle::RoundCap);
+  QPen pen_r(QBrush(r), pen_width, Qt::SolidLine, Qt::PenCapStyle::RoundCap);
 
   double xx = p.x() + cos(angle) * len;
   double yy = p.y() + sin(angle) * len;
 
-  if (orientation_line == nullptr)
+  if (orientation_line_x == nullptr)
   {
-    orientation_line = scene->addLine(p.x(), p.y(),
-        xx, yy, pen);
+    orientation_line_x = scene->addLine(p.x(), p.y(),
+        xx, yy, pen_r);
   }
   else
   {
-    orientation_line->setLine(p.x(), p.y(),
+    orientation_line_x->setLine(p.x(), p.y(),
       xx, yy);
   }
+
+  xx = p.x() + cos(angle - M_PI_2) * len;
+  yy = p.y() + sin(angle - M_PI_2) * len;
+
+  if (orientation_line_y == nullptr)
+  {
+    orientation_line_y = scene->addLine(p.x(), p.y(),
+        xx, yy, pen_g);
+  }
+  else
+  {
+    orientation_line_y->setLine(p.x(), p.y(),
+      xx, yy);
+  }
+}
+
+QColor AlignLevelDialog::gen_random_color()
+{
+  const double golden_ratio_conjugate = 0.618033988749895;
+  double r = ((double)rand() / RAND_MAX) + 0.618033988749895;
+  r = fmod(r, 1.0);
+  double g = ((double)rand() / RAND_MAX) + 0.618033988749895;
+  g = fmod(g, 1.0);
+  double b = ((double)rand() / RAND_MAX) + 0.618033988749895;
+  b = fmod(b, 1.0);
+
+  return QColor::fromRgbF(r, g, b);
 }

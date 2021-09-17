@@ -256,7 +256,7 @@ bool AlignLevelDialog::save(QString fn)
 
       // * QQuaternion's fromEulerAngles function has different coordinate system from ros.
       // * input yaw to roll (z axis around).
-      QQuaternion quaternion = QQuaternion::fromEulerAngles(0., 0., (float)diff_yaw);
+      QQuaternion quaternion = QQuaternion::fromEulerAngles(0., 0., (float)diff_yaw * 180 / M_PI);
       
       position["x"] = rotate_x;
       position["y"] = rotate_y;

@@ -220,13 +220,76 @@ void AlignLevelDialog::draw_scene(QGraphicsScene* scene,
       item_relative->setBrush(_alignments[to.second.idx].color);
       item_relative->setPos(to.second.position.x(),
         to.second.position.y() + 10);
+
+      draw_output_scene();
     }
   }
 }
 
 void AlignLevelDialog::draw_output_scene()
 {
-  // TODO : Draw output scene which contains combined image.
+  _output_level_scene->clear();
+
+  if (!is_have_relative(_fst_level_idx, _scd_level_idx))
+  {
+    return;
+  }
+  else
+  {
+    QPixmap pixmap_fst = _building.levels.at(_fst_level_idx).floorplan_pixmap;
+    pixmap_fst.fill(Qt::transparent);
+    QPainter p(&pixmap_fst);
+    p.setOpacity(0.2);
+    p.drawPixmap(0, 0, _building.levels.at(_fst_level_idx).floorplan_pixmap);
+    p.end();
+
+    _output_level_scene->addPixmap(pixmap_fst);
+  }
+
+  if (!is_have_relative(_scd_level_idx, _fst_level_idx))
+  {
+    return;
+  }
+  else
+  {
+    QPixmap pixmap_scd = _building.levels.at(_scd_level_idx).floorplan_pixmap;
+
+
+    QPointF point1 =
+      _alignments[_fst_level_idx].relative_point[_scd_level_idx].position;
+    QPointF point2 =
+      _alignments[_scd_level_idx].relative_point[_fst_level_idx].position;
+
+    QPointF diff_point = point1 - point2;
+    double yaw1 =
+      _alignments[_fst_level_idx].relative_point[_scd_level_idx].orientation;
+    double yaw2 =
+      _alignments[_scd_level_idx].relative_point[_fst_level_idx].orientation;
+
+    QPointF rotated_p;
+    double diff_yaw = yaw1 - yaw2;
+    rotated_p.setX(point2.x() * cos(diff_yaw) - point2.y() * sin(diff_yaw));
+    rotated_p.setY(point2.x() * sin(diff_yaw) + point2.y() * cos(diff_yaw));
+
+    QPointF pos = point1 - point2 + QPointF(10 * sin(
+          diff_yaw), -10 * cos(diff_yaw));
+
+    qreal width_2 = pixmap_scd.width() / 2;
+    qreal height_2 = pixmap_scd.height() / 2;
+    
+    pixmap_scd.fill(Qt::transparent);
+    QPainter p2(&pixmap_scd);
+    p2.setOpacity(0.2);
+
+    p2.translate(point1.x(), point1.y());
+    p2.rotate(diff_yaw*180/M_PI);
+    p2.translate(-point2.x(), -point2.y());
+
+    p2.drawPixmap(0, 0, _building.levels.at(_scd_level_idx).floorplan_pixmap);
+    p2.end();
+
+    _output_level_scene->addPixmap(pixmap_scd);
+  }
 }
 
 bool AlignLevelDialog::save(QString fn)

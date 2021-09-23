@@ -55,6 +55,7 @@ public:
 protected:
   void mousePressEvent(QMouseEvent* e);
   void mouseMoveEvent(QMouseEvent* e);
+  void mouseReleaseEvent(QMouseEvent* e);
 
 private:
   Building& _building;
@@ -102,6 +103,15 @@ private:
     MOUSE_MOVE = 3
   };
 
+  enum MouseStatus
+  {
+    IDLE = 0,
+    MOVE_POSE = 1,
+    ROTATE_POSE = 2,
+    ADD_POSE = 3
+  };
+
+  MouseStatus _mouse_status = MouseStatus::IDLE;
   bool _is_clicked = false;
   bool _is_ctrl_pressed = false;
   QPointF _clicked_point;
@@ -111,6 +121,8 @@ private:
 
   void mouse_event(const MouseType t, QMouseEvent* e);
   bool is_mouse_event_in_map_view(QMouseEvent* e, QPointF& p, MapView* mv);
+  bool is_in_near(QPointF& p1, QPointF& p2);
+  bool is_in_x_axis(QPointF& p1, QPointF& p2, double yaw);
 
   bool is_have_origin(const int level_idx);
   bool is_have_relative(const int selected_idx, const int relative_idx);
@@ -125,6 +137,8 @@ private:
   void draw_position(QGraphicsScene* scene, const QPointF& p, QColor color);
   void draw_orientation(QGraphicsScene* scene,
     const QPointF& p, const double& angle);
+  void draw_relative_text(QGraphicsScene* scene,
+    const QPointF& p, const int selected_level_idx);
   void draw_moving_orientation(QGraphicsScene* scene,
     const QPointF& p, const double& angle);
   QColor gen_random_color();

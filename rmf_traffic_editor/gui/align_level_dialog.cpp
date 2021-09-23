@@ -31,7 +31,7 @@ AlignLevelDialog::AlignLevelDialog(Building& building)
   _export_button = new QPushButton("Export", this);  // first button = [enter] button
   _cancel_button = new QPushButton("Cancel", this);
 
-  // add origin in alignments
+  // add origin in _alignments
   for (size_t i = 0; i < _building.levels.size(); i++)
   {
     add_origin(_building.levels[i], i);
@@ -189,28 +189,28 @@ void AlignLevelDialog::draw_scene(QGraphicsScene* scene,
 
   if (is_have_origin(draw_level_idx))
   {
-    draw_position(scene, alignments[draw_level_idx].position,
-      alignments[draw_level_idx].color);
-    draw_orientation(scene, alignments[draw_level_idx].position,
-      alignments[draw_level_idx].orientation);
+    draw_position(scene, _alignments[draw_level_idx].position,
+      _alignments[draw_level_idx].color);
+    draw_orientation(scene, _alignments[draw_level_idx].position,
+      _alignments[draw_level_idx].orientation);
     QGraphicsSimpleTextItem* item_origin = scene->addSimpleText(
       QString::fromStdString("origin"));
-    item_origin->setBrush(alignments[draw_level_idx].color);
-    item_origin->setPos(alignments[draw_level_idx].position.x(),
-      alignments[draw_level_idx].position.y() + 10);
+    item_origin->setBrush(_alignments[draw_level_idx].color);
+    item_origin->setPos(_alignments[draw_level_idx].position.x(),
+      _alignments[draw_level_idx].position.y() + 10);
 
-    for (const auto to : alignments[draw_level_idx].relative_point)
+    for (const auto to : _alignments[draw_level_idx].relative_point)
     {
       QColor p_color = QColor::fromHsvF(
-        alignments[to.second.idx].color.hsvHueF(), 0.3, 0.99);
+        _alignments[to.second.idx].color.hsvHueF(), 0.3, 0.99);
       draw_position(scene, to.second.position, p_color);
       draw_orientation(scene, to.second.position,
         to.second.orientation);
 
 
       QGraphicsSimpleTextItem* item_relative = scene->addSimpleText(
-        QString::fromStdString(alignments[to.second.idx].name));
-      item_relative->setBrush(alignments[to.second.idx].color);
+        QString::fromStdString(_alignments[to.second.idx].name));
+      item_relative->setBrush(_alignments[to.second.idx].color);
       item_relative->setPos(to.second.position.x(),
         to.second.position.y() + 10);
     }
@@ -229,7 +229,7 @@ bool AlignLevelDialog::save(QString fn)
 
   QJsonObject obj;
 
-  for (const auto a : alignments)
+  for (const auto a : _alignments)
   {
     obj["Map"] = a.second.name.c_str();
     QJsonArray arr_connection;
@@ -312,11 +312,11 @@ void AlignLevelDialog::mouse_event(const MouseType t, QMouseEvent* e)
   else
   {
     // * mouse point moving out the scene, remove text
-    if (position_text != nullptr)
+    if (_position_text != nullptr)
     {
-      _last_mv->scene()->removeItem(position_text);
-      delete position_text;
-      position_text = nullptr;
+      _last_mv->scene()->removeItem(_position_text);
+      delete _position_text;
+      _position_text = nullptr;
     }
 
     e->ignore();
@@ -326,14 +326,14 @@ void AlignLevelDialog::mouse_event(const MouseType t, QMouseEvent* e)
   // draw text around mouse point
   if (_last_mv != mv)
   {
-    if (position_text != nullptr)
+    if (_position_text != nullptr)
     {
-      _last_mv->scene()->removeItem(position_text);
-      delete position_text;
-      position_text = nullptr;
+      _last_mv->scene()->removeItem(_position_text);
+      delete _position_text;
+      _position_text = nullptr;
     }
   }
-  if (!is_clicked)
+  if (!_is_clicked)
   {
     std::string name = _building.levels[selected_level_idx].name;
 
@@ -345,17 +345,17 @@ void AlignLevelDialog::mouse_event(const MouseType t, QMouseEvent* e)
     if (is_have_origin(selected_level_idx))
     {
       y_offset = (double)_building.levels[selected_level_idx].drawing_height;
-      real_x_src = (p.x() - alignments[selected_level_idx].position.x());
+      real_x_src = (p.x() - _alignments[selected_level_idx].position.x());
       real_x_src *= _building.level_meters_per_pixel(name);
 
-      real_y_src = -1 * (p.y() - alignments[selected_level_idx].position.y());
+      real_y_src = -1 * (p.y() - _alignments[selected_level_idx].position.y());
       real_y_src *= _building.level_meters_per_pixel(name);
 
       double rotate_x;
       double rotate_y;
       // the orientaion of alignmentinfo is aimed to origin of image(graphic scene)
       // To follow ros coordinate system, multiply '-1' to orientation
-      double yaw = -alignments[selected_level_idx].orientation;
+      double yaw = -_alignments[selected_level_idx].orientation;
 
       rotate_x = cos(-yaw) * real_x_src - sin(-yaw) * real_y_src;
       rotate_y = sin(-yaw) * real_x_src + cos(-yaw) * real_y_src;
@@ -372,29 +372,29 @@ void AlignLevelDialog::mouse_event(const MouseType t, QMouseEvent* e)
         real_x_src, real_y_src);
     }
 
-    if (position_text == nullptr)
+    if (_position_text == nullptr)
     {
-      position_text = mv->scene()->addSimpleText(text);
+      _position_text = mv->scene()->addSimpleText(text);
       _last_mv = mv;
-      position_text->setBrush(QColor(0, 0, 0));
-      position_text->setPos(p.x(), p.y() + 15);
+      _position_text->setBrush(QColor(0, 0, 0));
+      _position_text->setPos(p.x(), p.y() + 15);
     }
     else
     {
-      position_text->setText(text);
-      position_text->setPos(p.x(), p.y() + 15);
+      _position_text->setText(text);
+      _position_text->setPos(p.x(), p.y() + 15);
     }
   }
 
   // do the job
   if (t == MOUSE_PRESS)
   {
-    if (!is_clicked)
+    if (!_is_clicked)
     {
-      is_ctrl_pressed = QGuiApplication::keyboardModifiers().testFlag(
+      _is_ctrl_pressed = QGuiApplication::keyboardModifiers().testFlag(
         Qt::ControlModifier);
 
-      if (!is_ctrl_pressed)
+      if (!_is_ctrl_pressed)
       {
         if (!is_have_origin(relative_level_idx) ||
           !is_have_origin(selected_level_idx))
@@ -423,50 +423,50 @@ void AlignLevelDialog::mouse_event(const MouseType t, QMouseEvent* e)
       _color = gen_random_color();
       draw_position(mv->scene(), p, _color);
 
-      clicked_point = p;
-      is_clicked = true;
+      _clicked_point = p;
+      _is_clicked = true;
     }
     else
     {
-      mv->scene()->removeItem(orientation_line_x);
-      mv->scene()->removeItem(orientation_line_y);
-      delete orientation_line_x;
-      delete orientation_line_y;
-      orientation_line_x = nullptr;
-      orientation_line_y = nullptr;
-      if (position_text != nullptr)
+      mv->scene()->removeItem(_orientation_line_x);
+      mv->scene()->removeItem(_orientation_line_y);
+      delete _orientation_line_x;
+      delete _orientation_line_y;
+      _orientation_line_x = nullptr;
+      _orientation_line_y = nullptr;
+      if (_position_text != nullptr)
       {
-        mv->scene()->removeItem(position_text);
-        delete position_text;
-        position_text = nullptr;
+        mv->scene()->removeItem(_position_text);
+        delete _position_text;
+        _position_text = nullptr;
       }
 
-      if (is_ctrl_pressed)
+      if (_is_ctrl_pressed)
       {
-        if (add_origin(clicked_point, p, selected_level_idx, _color))
+        if (add_origin(_clicked_point, p, selected_level_idx, _color))
         {
           draw_scene(mv->scene(), selected_level_idx);
         }
       }
       else
       {
-        if (add_relative_point(clicked_point, p, selected_level_idx,
+        if (add_relative_point(_clicked_point, p, selected_level_idx,
           relative_level_idx))
         {
           draw_scene(mv->scene(), selected_level_idx);
         }
       }
 
-      is_ctrl_pressed = false;
-      is_clicked = false;
+      _is_ctrl_pressed = false;
+      _is_clicked = false;
     }
   }
-  else if (t == MOUSE_MOVE && is_clicked)
+  else if (t == MOUSE_MOVE && _is_clicked)
   {
-    double diff_x = p.x() - clicked_point.x();
-    double diff_y = p.y() - clicked_point.y();
+    double diff_x = p.x() - _clicked_point.x();
+    double diff_y = p.y() - _clicked_point.y();
     double angle = atan2(diff_y, diff_x);
-    draw_moving_orientation(mv->scene(), clicked_point, angle);
+    draw_moving_orientation(mv->scene(), _clicked_point, angle);
   }
 }
 
@@ -486,7 +486,7 @@ bool AlignLevelDialog::is_mouse_event_in_map_view(QMouseEvent* e, QPointF& p,
 
 bool AlignLevelDialog::is_have_origin(const int level_idx)
 {
-  return alignments.find(level_idx) != alignments.end();
+  return _alignments.find(level_idx) != _alignments.end();
 }
 
 bool AlignLevelDialog::is_have_relative(const int from_idx,
@@ -497,8 +497,8 @@ bool AlignLevelDialog::is_have_relative(const int from_idx,
     return false;
   }
 
-  return alignments[from_idx].relative_point.find(to_idx) !=
-    alignments[from_idx].relative_point.end();
+  return _alignments[from_idx].relative_point.find(to_idx) !=
+    _alignments[from_idx].relative_point.end();
 }
 
 bool AlignLevelDialog::add_origin(const Level& level, const int idx)
@@ -518,7 +518,7 @@ bool AlignLevelDialog::add_origin(const Level& level, const int idx)
 
   align_info.color = gen_random_color();
 
-  alignments.insert(std::pair<int, AlignmentInfo>(idx, align_info));
+  _alignments.insert(std::pair<int, AlignmentInfo>(idx, align_info));
 
   return true;
 }
@@ -542,7 +542,7 @@ bool AlignLevelDialog::add_origin(const QPointF& start, const QPointF& dst,
 
   align_info.color = color;
 
-  alignments.insert(std::pair<int, AlignmentInfo>(idx, align_info));
+  _alignments.insert(std::pair<int, AlignmentInfo>(idx, align_info));
 
   return true;
 }
@@ -570,7 +570,7 @@ bool AlignLevelDialog::add_relative_point(const QPointF& start,
   double diff_y = dst.y() - start.y();
   align_info.orientation = atan2(diff_y, diff_x);
 
-  alignments[from_idx].relative_point.insert(std::pair<int, AlignmentInfo>(
+  _alignments[from_idx].relative_point.insert(std::pair<int, AlignmentInfo>(
       to_idx,
       align_info));
   return true;
@@ -639,28 +639,28 @@ void AlignLevelDialog::draw_moving_orientation(QGraphicsScene* scene,
   double xx = p.x() + cos(angle) * len;
   double yy = p.y() + sin(angle) * len;
 
-  if (orientation_line_x == nullptr)
+  if (_orientation_line_x == nullptr)
   {
-    orientation_line_x = scene->addLine(p.x(), p.y(),
+    _orientation_line_x = scene->addLine(p.x(), p.y(),
         xx, yy, pen_r);
   }
   else
   {
-    orientation_line_x->setLine(p.x(), p.y(),
+    _orientation_line_x->setLine(p.x(), p.y(),
       xx, yy);
   }
 
   xx = p.x() + cos(angle - M_PI_2) * len;
   yy = p.y() + sin(angle - M_PI_2) * len;
 
-  if (orientation_line_y == nullptr)
+  if (_orientation_line_y == nullptr)
   {
-    orientation_line_y = scene->addLine(p.x(), p.y(),
+    _orientation_line_y = scene->addLine(p.x(), p.y(),
         xx, yy, pen_g);
   }
   else
   {
-    orientation_line_y->setLine(p.x(), p.y(),
+    _orientation_line_y->setLine(p.x(), p.y(),
       xx, yy);
   }
 }

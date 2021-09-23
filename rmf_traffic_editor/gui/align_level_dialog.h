@@ -59,7 +59,7 @@ protected:
 private:
   Building& _building;
 
-  std::map<int, AlignmentInfo> alignments;
+  std::map<int, AlignmentInfo> _alignments;
 
   QLineEdit* _building_name_line_edit;
   QComboBox* _reference_floor_combo_box;
@@ -102,13 +102,12 @@ private:
     MOUSE_MOVE = 3
   };
 
-  bool is_clicked = false;
-  bool is_ctrl_pressed = false;
-  QPointF clicked_point;
-  QGraphicsEllipseItem* postion_ellipse = nullptr;
-  QGraphicsLineItem* orientation_line_x = nullptr;
-  QGraphicsLineItem* orientation_line_y = nullptr;
-  QGraphicsSimpleTextItem* position_text = nullptr;
+  bool _is_clicked = false;
+  bool _is_ctrl_pressed = false;
+  QPointF _clicked_point;
+  QGraphicsLineItem* _orientation_line_x = nullptr;
+  QGraphicsLineItem* _orientation_line_y = nullptr;
+  QGraphicsSimpleTextItem* _position_text = nullptr;
 
   void mouse_event(const MouseType t, QMouseEvent* e);
   bool is_mouse_event_in_map_view(QMouseEvent* e, QPointF& p, MapView* mv);

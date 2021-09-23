@@ -134,6 +134,7 @@ private:
   void building_open();
   bool building_save();
   bool building_export_features();
+  bool building_export_level_align();
 
   bool maybe_save();
   void edit_undo();

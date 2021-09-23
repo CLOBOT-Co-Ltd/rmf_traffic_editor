@@ -49,6 +49,8 @@ set(gui_sources
   gui/actions/polygon_add_vertex.cpp
   gui/actions/rotate_model.cpp
   gui/add_param_dialog.cpp
+  gui/align_level_dialog.cpp
+  gui/align_level_table.cpp
   gui/building.cpp
   gui/building_dialog.cpp
   gui/constraint.cpp

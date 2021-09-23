@@ -47,6 +47,7 @@
 #include "actions/polygon_remove_vertices.h"
 
 #include "add_param_dialog.h"
+#include "align_level_dialog.h"
 #include "building_dialog.h"
 #include "editor.h"
 #include "layer_dialog.h"
@@ -295,6 +296,12 @@ Editor::Editor()
     this,
     &Editor::building_export_features,
     QKeySequence(Qt::CTRL + Qt::Key_E));
+
+  building_menu->addAction(
+    "Export level &Alignment to json",
+    this,
+    &Editor::building_export_level_align,
+    QKeySequence(Qt::CTRL + Qt::Key_A));
 
   building_menu->addSeparator();
 
@@ -708,6 +715,15 @@ bool Editor::building_export_features()
     file_info.absoluteFilePath().toStdString());
   setWindowModified(false);
   return result;
+}
+
+bool Editor::building_export_level_align()
+{
+  AlignLevelDialog dialog(building);
+  if (dialog.exec() == QDialog::Accepted)
+    return true;
+
+  return false;
 }
 
 void Editor::help_about()

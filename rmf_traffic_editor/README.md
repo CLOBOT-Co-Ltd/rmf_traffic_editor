@@ -120,6 +120,19 @@ User can also change the script default configs:  `img_size`, `cam_height` and `
 
 Similarly, the generated thumbnails in `~/output` can then be added to `traffic_editor_assets/assets/thumbnails`, while also append `model_list.yaml`.
 
+### Alignment levels in same site
+
+If a site have two and more png files, user can align those maps from each map's relative pose from another map.
+
+Click `building -> Export level alignment to json` and select two maps in combo box.
+
+Set the relative pose on each map. After all pose is setting up, click `export` button.
+
+Click following image and watch video for example.
+
+[![Example alignment tool](https://img.youtube.com/vi/Po_IQAZ1m_g/0.jpg)](https://youtu.be/Po_IQAZ1m_g "Example alignment tool")
+
+
 ### Utilities
 
 A new model list `.yaml` file can be generated using the utility script, where an optional blacklisted model names can be added, to avoid creating moving models or agents,

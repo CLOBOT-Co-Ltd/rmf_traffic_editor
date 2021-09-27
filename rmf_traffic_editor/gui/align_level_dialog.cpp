@@ -54,7 +54,6 @@ AlignLevelDialog::AlignLevelDialog(Building& building)
   _fst_level_scene = new QGraphicsScene;
   _fst_level_view = new MapView;
   _fst_level_view->setScene(_fst_level_scene);
-  draw_scene(_fst_level_scene, _fst_level_idx);
   fst_level_vbox->addWidget(_fst_level_view);
   _fst_level_view->scale(1.00001, 1.00001);
 
@@ -86,7 +85,6 @@ AlignLevelDialog::AlignLevelDialog(Building& building)
   _scd_level_scene = new QGraphicsScene;
   _scd_level_view = new MapView;
   _scd_level_view->setScene(_scd_level_scene);
-  draw_scene(_scd_level_scene, _scd_level_idx);
   scd_level_vbox->addWidget(_scd_level_view);
   _scd_level_view->scale(1.00001, 1.00001);
 
@@ -124,6 +122,9 @@ AlignLevelDialog::AlignLevelDialog(Building& building)
   levels_graphic_hbox->addLayout(fst_level_vbox);
   levels_graphic_hbox->addLayout(scd_level_vbox);
   levels_graphic_hbox->addLayout(output_level_vbox);
+
+  draw_scene(_fst_level_scene, _fst_level_idx);
+  draw_scene(_scd_level_scene, _scd_level_idx);
 
   QHBoxLayout* table_hbox = new QHBoxLayout;
   _align_table = new AlignLevelTable;
@@ -220,9 +221,9 @@ void AlignLevelDialog::draw_scene(QGraphicsScene* scene,
       item_relative->setBrush(_alignments[to.second.idx].color);
       item_relative->setPos(to.second.position.x(),
         to.second.position.y() + 10);
-
-      draw_output_scene();
     }
+
+    draw_output_scene();
   }
 }
 
@@ -230,7 +231,7 @@ void AlignLevelDialog::draw_output_scene()
 {
   _output_level_scene->clear();
 
-  if (!is_have_relative(_fst_level_idx, _scd_level_idx))
+  if (!is_have_origin(_fst_level_idx))
   {
     return;
   }
@@ -246,7 +247,8 @@ void AlignLevelDialog::draw_output_scene()
     _output_level_scene->addPixmap(pixmap_fst);
   }
 
-  if (!is_have_relative(_scd_level_idx, _fst_level_idx))
+  if (!is_have_relative(_scd_level_idx, _fst_level_idx) ||
+    !is_have_relative(_fst_level_idx, _scd_level_idx))
   {
     return;
   }
@@ -276,7 +278,7 @@ void AlignLevelDialog::draw_output_scene()
 
     qreal width_2 = pixmap_scd.width() / 2;
     qreal height_2 = pixmap_scd.height() / 2;
-    
+
     pixmap_scd.fill(Qt::transparent);
     QPainter p2(&pixmap_scd);
     p2.setOpacity(0.2);
